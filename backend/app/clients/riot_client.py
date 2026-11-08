@@ -1,13 +1,4 @@
 import httpx
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-API_KEY = os.getenv("RIOT_API_KEY")
-
-
-import httpx
 from urllib.parse import quote
 
 
@@ -53,7 +44,8 @@ class RiotClient:
         self,
         puuid: str,
         start: int = 0,
-        count: int = 20
+        count: int = 20,
+        queue: int | None = None,
     ) -> list[str]:
         """Retrieve match IDs for a player."""
 
@@ -63,6 +55,8 @@ class RiotClient:
             "start": start,
             "count": count
         }
+        if queue is not None:
+            params["queue"] = queue
 
         return self._get(endpoint, params=params)
 
@@ -75,6 +69,9 @@ class RiotClient:
         endpoint = f"/lol/match/v5/matches/{match_id}"
 
         return self._get(endpoint)
+
+    def get_match_timeline(self, match_id: str) -> dict:
+        return self._get(f"/lol/match/v5/matches/{quote(match_id, safe='')}/timeline")
 
     def close(self) -> None:
         """Close the HTTP client."""
