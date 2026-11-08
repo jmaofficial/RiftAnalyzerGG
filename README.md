@@ -28,8 +28,14 @@ RiftAnalyzerGG is a personal side project focused on analyzing League of Legends
 The backend can sync Riot match details, participant statistics and timelines
 into PostgreSQL, then serve or export a player's dataset for analysis.
 See [backend setup and match collection](backend/docs/match_data.md) for migrations,
-API examples, SQL queries, CSV export and tests. Statistical analysis and the
-React frontend are the next stages.
+API examples, SQL queries, CSV export and tests.
+
+The first analysis stage now extracts 10/15/20-minute timeline features and
+returns statistical associations with sample sizes and uncertainty, separated
+by position and patch. It also extracts phase progression, post-kill/death windows
+and conservative mid-player sidelane proxies, with descriptive win/loss summaries.
+See [personal match analysis](backend/docs/analysis.md)
+for the API, feature definitions and limitations. LLM report generation is planned.
 
 ## Disclaimer
 

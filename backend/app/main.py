@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.players import router as players_router
 from app.api.matches import router as matches_router
+from app.api.analysis import router as analysis_router
 from app.services.match_service import InvalidMatchData
 from app.core.exception_handlers import (
     riot_http_error_handler,
@@ -19,6 +20,7 @@ app = FastAPI(
 
 app.include_router(players_router)
 app.include_router(matches_router)
+app.include_router(analysis_router)
 
 
 @app.exception_handler(InvalidMatchData)
