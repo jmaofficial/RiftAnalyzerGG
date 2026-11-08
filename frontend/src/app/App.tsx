@@ -58,7 +58,7 @@ export default function App() {
           <PlayerSearch
             onSearch={state.search}
             searching={state.searching}
-            disabled={state.syncing}
+            disabled={state.syncing || state.refreshing}
           />
           <div className="search-hint">
             <span className="region-dot" /> Europe <span>·</span> Ranked Solo /
@@ -103,25 +103,47 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <button
-                className="button button-quiet"
-                onClick={() => void state.sync()}
-                disabled={state.syncing || state.cooldown > 0}
-              >
-                {state.syncing ? (
-                  <LoaderCircle className="spin" size={15} />
-                ) : (
-                  <RefreshCw size={15} />
-                )}
-                {state.syncing
-                  ? "Importing matches…"
-                  : state.cooldown > 0
-                    ? `Continue in ${state.cooldown}s`
-                    : state.resumeStart > 0
-                      ? "Continue import"
-                      : "Sync latest 50"}
-              </button>
+              <div className="player-actions">
+                <button
+                  className="button button-quiet"
+                  onClick={() => void state.refresh()}
+                  disabled={state.syncing || state.refreshing || state.loading}
+                >
+                  <RefreshCw
+                    className={state.refreshing || state.loading ? "spin" : ""}
+                    size={15}
+                  />
+                  {state.refreshing || state.loading
+                    ? "Refreshing…"
+                    : "Refresh report"}
+                </button>
+                <button
+                  className="button button-primary"
+                  onClick={() => void state.sync()}
+                  disabled={
+                    state.syncing || state.refreshing || state.cooldown > 0
+                  }
+                >
+                  {state.syncing ? (
+                    <LoaderCircle className="spin" size={15} />
+                  ) : (
+                    <RefreshCw size={15} />
+                  )}
+                  {state.syncing
+                    ? "Importing matches…"
+                    : state.cooldown > 0
+                      ? `Continue in ${state.cooldown}s`
+                      : state.paused
+                        ? "Try update again"
+                        : "Update matches"}
+                </button>
+              </div>
             </div>
+            <p className="update-hint">
+              Your report uses stored matches. Update matches checks Riot for up
+              to 50 recent ranked games; Refresh report reloads the saved data.
+              Champion and lane filters still apply.
+            </p>
             {state.notice && (
               <div className="notice" role="status">
                 <RefreshCw className={state.syncing ? "spin" : ""} size={17} />

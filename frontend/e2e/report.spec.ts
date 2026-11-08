@@ -2,6 +2,54 @@ import { expect, test } from "@playwright/test";
 import { makeReport, options } from "../src/test/fixtures";
 import type { Lane } from "../src/features/analysis/types";
 
+test("a three-match report has a visible update action and refreshes after importing", async ({
+  page,
+}) => {
+  let count = 3;
+  await page.route("**/api/players/**", (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("/sync")) {
+      count = 50;
+      return route.fulfill({
+        json: {
+          completed: true,
+          next_start: 50,
+          found: 50,
+          imported: 47,
+          retry_after: null,
+          failures: [],
+        },
+      });
+    }
+    return route.fulfill({
+      json: url.pathname.endsWith("/options")
+        ? { ...options, stored_matches: count }
+        : { ...makeReport(), selected_matches: count, matched_total: count },
+    });
+  });
+  await page.goto("/");
+  await page.getByLabel("GAME NAME").fill("TestPlayer");
+  await page.getByLabel("TAGLINE").fill("EUW");
+  await page.getByRole("button", { name: "View report" }).click();
+  await expect(
+    page.getByText("3 stored ranked matches · All champions · All lanes"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Update matches" }).click();
+  await expect(
+    page.getByText(/Import complete\. 50 recent ranked matches checked/),
+  ).toBeVisible();
+  await expect(
+    page.getByText("50 stored ranked matches · All champions · All lanes"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Refresh report" }),
+  ).toBeEnabled();
+  await expect(page.locator("body")).toHaveJSProperty(
+    "scrollWidth",
+    await page.evaluate(() => innerWidth),
+  );
+});
+
 test("search, filter and explore a report in English", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));

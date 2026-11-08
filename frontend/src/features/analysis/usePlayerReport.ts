@@ -22,6 +22,8 @@ export function usePlayerReport() {
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [resumeStart, setResumeStart] = useState(0);
@@ -52,6 +54,7 @@ export function usePlayerReport() {
     setError(null);
     setNotice(null);
     setResumeStart(0);
+    setPaused(false);
     setCooldown(0);
     setCanSkip(false);
     try {
@@ -97,6 +100,23 @@ export function usePlayerReport() {
     return () => controller.abort();
   }, [player, filters, revision]);
 
+  const refresh = async () => {
+    if (!player) return;
+    setRefreshing(true);
+    try {
+      setOptions(await analysisApi.options(player));
+    } catch {
+      setNotice(
+        (current) =>
+          `${current ? `${current} ` : ""}Some player details could not be refreshed. Try Refresh report again.`,
+      );
+    } finally {
+      // Retry the report even if refreshing filter choices failed.
+      setRevision((value) => value + 1);
+      setRefreshing(false);
+    }
+  };
+
   const sync = async () => {
     if (!player || syncing || cooldown > 0) return;
     setSyncing(true);
@@ -108,6 +128,7 @@ export function usePlayerReport() {
     try {
       const result = await analysisApi.sync(player, resumeStart);
       if (!result.completed) {
+        setPaused(true);
         setResumeStart(result.next_start);
         const retry = Number(result.retry_after);
         setCooldown(Number.isFinite(retry) && retry > 0 ? Math.ceil(retry) : 0);
@@ -119,22 +140,24 @@ export function usePlayerReport() {
             : `Import paused at match ${result.next_start + 1}. Earlier matches are saved. ${failed?.detail || "Please try continuing."}`,
         );
       } else {
+        setPaused(false);
         const checked = resumeStart + result.found;
         setResumeStart(0);
         setNotice(
           `Import complete. ${checked} recent ranked matches checked. Your report uses the current filters.`,
         );
       }
-      setOptions(await analysisApi.options(player));
-      setRevision((value) => value + 1);
     } catch (error) {
+      setPaused(true);
       if (error instanceof ApiError && error.retryAfter)
         setCooldown(Math.ceil(error.retryAfter));
       setError(message(error));
       setNotice(
-        "The import did not finish. Matches already saved remain available. You can safely try again.",
+        `The update did not finish. ${message(error)} Matches already saved remain available. Try updating again.`,
       );
     } finally {
+      // A failed response can still follow committed matches. Always re-read them.
+      await refresh();
       setSyncing(false);
     }
   };
@@ -148,6 +171,8 @@ export function usePlayerReport() {
     searching,
     loading,
     syncing,
+    refreshing,
+    paused,
     error,
     notice,
     resumeStart,
@@ -155,10 +180,12 @@ export function usePlayerReport() {
     canSkip,
     search,
     sync,
-    retry: () => setRevision((value) => value + 1),
+    refresh,
+    retry: refresh,
     skip: () => {
       if (resumeStart >= 49) {
         setResumeStart(0);
+        setPaused(false);
         setNotice(
           "Import finished with the final unavailable match skipped. All other saved matches remain in your report.",
         );

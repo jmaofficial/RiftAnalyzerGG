@@ -41,6 +41,149 @@ async function search() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("player report workflow", () => {
+  it("updates a three-match report after fetching more matches", async () => {
+    let count = 3;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string) => {
+        if (input.includes("/sync")) {
+          count = 50;
+          return json({
+            completed: true,
+            next_start: 50,
+            found: 50,
+            imported: 47,
+            retry_after: null,
+            failures: [],
+          });
+        }
+        if (input.includes("/options"))
+          return json({ ...options, stored_matches: count });
+        return json({
+          ...makeReport(),
+          selected_matches: count,
+          matched_total: count,
+        });
+      }),
+    );
+    render(<App />);
+    const user = await search();
+    await screen.findByText("Your report, at a glance.");
+    expect(
+      screen.getByText("MATCHES ANALYZED").closest("article"),
+    ).toHaveTextContent("3");
+    await user.click(screen.getByRole("button", { name: "Update matches" }));
+    await screen.findByText(
+      /Import complete\. 50 recent ranked matches checked/,
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByText("MATCHES ANALYZED").closest("article"),
+      ).toHaveTextContent("50"),
+    );
+    expect(screen.getByText(/50 stored ranked matches/)).toBeInTheDocument();
+  });
+
+  it("refreshes the stored report without Riot imports and preserves champion/lane filters", async () => {
+    mockApi();
+    render(<App />);
+    const user = await search();
+    await screen.findByText("Your report, at a glance.");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Champion" }),
+      "1",
+    );
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Lane" }),
+      "MIDDLE",
+    );
+    await screen.findByText("Your report, at a glance.");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Refresh report" }),
+      ).toBeEnabled(),
+    );
+    vi.mocked(fetch).mockClear();
+    await user.click(screen.getByRole("button", { name: "Refresh report" }));
+    await screen.findByText("Your report, at a glance.");
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).includes("/options")),
+    ).toBe(true);
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(
+          ([url]) =>
+            String(url).includes("champion_id=1") &&
+            String(url).includes("position=MIDDLE"),
+        ),
+    ).toBe(true);
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.some(([url]) => String(url).includes("/sync")),
+    ).toBe(false);
+  });
+
+  it("reloads committed matches after an update request fails and offers another attempt", async () => {
+    let count = 3;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string) => {
+        if (input.includes("/sync")) {
+          count = 7;
+          return json({ detail: "The request timed out" }, 504);
+        }
+        if (input.includes("/options"))
+          return json({ ...options, stored_matches: count });
+        return json({ ...makeReport(), selected_matches: count });
+      }),
+    );
+    render(<App />);
+    const user = await search();
+    await screen.findByText("Your report, at a glance.");
+    await user.click(screen.getByRole("button", { name: "Update matches" }));
+    await screen.findByText(/The update did not finish/);
+    await waitFor(() =>
+      expect(
+        screen.getByText("MATCHES ANALYZED").closest("article"),
+      ).toHaveTextContent("7"),
+    );
+    expect(
+      screen.getByRole("button", { name: "Try update again" }),
+    ).toBeEnabled();
+    expect(screen.queryByText(/Import complete\./)).not.toBeInTheDocument();
+  });
+
+  it("offers another attempt when an import pauses before the first match", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string) => {
+        if (input.includes("/sync"))
+          return json({
+            completed: false,
+            next_start: 0,
+            found: 50,
+            imported: 0,
+            retry_after: null,
+            failures: [{ upstream_status: 429, detail: "Rate limited" }],
+          });
+        return input.includes("/options") ? json(options) : json(makeReport());
+      }),
+    );
+    render(<App />);
+    const user = await search();
+    await screen.findByText("Your report, at a glance.");
+    await user.click(screen.getByRole("button", { name: "Update matches" }));
+    await screen.findByText(/Riot paused the import/);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Try update again" }),
+      ).toBeEnabled(),
+    );
+  });
   it("shows both comparison groups and preserves tiny p-values in supported findings", () => {
     const report = makeReport();
     report.status = "findings_available";
@@ -213,10 +356,10 @@ describe("player report workflow", () => {
     render(<App />);
     const user = await search();
     await screen.findByText("Your report, at a glance.");
-    await user.click(screen.getByRole("button", { name: "Sync latest 50" }));
+    await user.click(screen.getByRole("button", { name: "Update matches" }));
     await screen.findByText(/Riot paused the import/);
     expect(screen.queryByText(/Import complete\./)).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continue import" }));
+    await user.click(screen.getByRole("button", { name: "Try update again" }));
     await screen.findByText(
       /Import complete\. 50 recent ranked matches checked/,
     );

@@ -43,7 +43,7 @@ BACKEND_URL=http://127.0.0.1:8001 npm run dev
    report using those filters. Filters apply **before** the most-recent-games limit.
 4. Explore overall win rate, phase comparisons, sidelane observations and
    statistically supported patterns. Empty/small datasets are explained explicitly.
-5. Use **Sync latest 50** to refresh the stored match pool. It imports all champions
+5. Use **Update matches** to refresh the stored match pool. It imports all champions
    and lanes; the selected filters then determine the report, not what gets stored.
 
 The champion list and counts come from all the player's stored ranked games.
@@ -52,8 +52,11 @@ an empty report, not another champion's data. Riot's `MonkeyKing` name is displa
 as Wukong. The lane values map Mid to MIDDLE, Bot to BOTTOM and Support to UTILITY.
 
 Syncing can take minutes. A partial HTTP 200 sync response is treated as incomplete.
-The UI preserves the returned offset, respects Retry-After, and offers **Continue
-import**. A permanently unavailable match can be explicitly skipped. Previously
+The UI preserves the returned offset, respects Retry-After, and offers **Try update
+again**. **Refresh report** reloads the saved report and filter choices without
+contacting Riot. Every update attempt refreshes the report, including failed requests
+that may have committed some matches before the failure. A permanently unavailable
+match can be explicitly skipped. Previously
 stored matches remain available, and retrying is safe because imports are
 idempotent. Riot history offsets can shift if new games are played between attempts.
 
