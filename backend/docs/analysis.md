@@ -43,11 +43,26 @@ Both endpoints also appear under **Analysis** in `/docs`. Optional parameters:
 | `limit` | Most recent matching stored games; default 200, maximum 500. |
 | `position` | TOP, JUNGLE, MIDDLE, BOTTOM or UTILITY. |
 | `patch` | Major/minor version, such as `16.22`. |
+| `champion_id` | Optional Riot champion ID, such as 61 for Orianna. |
 
 Only queue 420 on Summoner's Rift (map 11) is considered. Matches are ordered by
 game start and match ID, newest first. Filters apply **before** the limit.
 `matched_total`, `selected_matches` and `truncated` expose the sample window;
 the backend never silently claims to have analyzed your entire history.
+
+Champion and lane filters combine and apply to both feature extraction and the
+whole report, including phase summaries and statistical comparisons. An empty
+combination produces an empty report. For example:
+
+```text
+GET /api/players/jonnybravo/1998/analysis?champion_id=61&position=MIDDLE&limit=50
+```
+
+`GET /api/players/{name}/{tag}/analysis/options` returns the stored player's
+canonical Riot ID, stored ranked-match count, champion IDs/names/counts and lane
+counts for populating the frontend filters. These counts cover all stored solo/duo
+games on map 11 before exclusion rules and the requested sample limit. Options and
+report reads do not call Riot.
 
 A known player with no usable matches returns HTTP 200 with an insufficient-data
 report. An unknown stored account returns 404; sync that account first.
@@ -220,7 +235,7 @@ Report statuses:
 `findings` contains only results that passed the gates, ranked by adjusted
 p-value, then absolute difference, then stable finding ID. A supported finding
 may have either direction; the code does not assume fewer deaths must correlate
-with more wins in every sample. Its short Swedish summary is a deterministic
+with more wins in every sample. Its short English summary is a deterministic
 template generated from the counts, not LLM text.
 
 ## What the findings mean

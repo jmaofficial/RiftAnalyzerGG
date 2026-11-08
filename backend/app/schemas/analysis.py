@@ -116,6 +116,26 @@ class AnalysisFilters(BaseModel):
     limit: int
     position: Position | None = None
     patch: str | None = None
+    champion_id: int | None = None
+
+
+class ChampionOption(BaseModel):
+    champion_id: int
+    champion_name: str
+    matches: int
+
+
+class LaneOption(BaseModel):
+    position: str
+    matches: int
+
+
+class AnalysisOptions(BaseModel):
+    game_name: str
+    tag_line: str
+    stored_matches: int
+    champions: list[ChampionOption]
+    lanes: list[LaneOption]
 
 
 class FeatureDataset(BaseModel):

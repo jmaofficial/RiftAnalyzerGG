@@ -37,6 +37,10 @@ and conservative mid-player sidelane proxies, with descriptive win/loss summarie
 See [personal match analysis](backend/docs/analysis.md)
 for the API, feature definitions and limitations. LLM report generation is planned.
 
+The [React + TypeScript frontend](frontend/README.md) provides player lookup,
+champion/lane filtering, phase comparisons and evidence summaries in English.
+Start the backend, then run `npm ci` and `npm run dev` from `frontend`.
+
 ## Disclaimer
 
 RiftAnalyzerGG is an independent hobby project and is not endorsed by Riot Games.

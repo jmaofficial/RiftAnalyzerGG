@@ -45,12 +45,12 @@ class Rule:
 
 # These thresholds are versioned product hypotheses, not fitted to the player's wins.
 RULES = (
-    Rule("deaths_10", 10, "deaths", 1, "le", "Högst 1 death vid 10:00", "Fler än 1 death vid 10:00"),
-    Rule("deaths_15", 15, "deaths", 2, "le", "Högst 2 deaths vid 15:00", "Fler än 2 deaths vid 15:00"),
-    Rule("gold_diff_15", 15, "gold_diff", 0, "ge", "Minst lika mycket guld som rollmotståndaren vid 15:00", "Mindre guld än rollmotståndaren vid 15:00"),
-    Rule("cs_diff_10", 10, "cs_diff", 0, "ge", "Minst lika mycket CS som rollmotståndaren vid 10:00", "Mindre CS än rollmotståndaren vid 10:00"),
-    Rule("xp_diff_15", 15, "xp_diff", 0, "ge", "Minst lika mycket XP som rollmotståndaren vid 15:00", "Mindre XP än rollmotståndaren vid 15:00"),
-    Rule("high_kill_deaths_20", 20, "deaths", 7, "le", "Minst 10 kills och färre än 8 deaths vid 20:00", "Minst 10 kills och minst 8 deaths vid 20:00", minimum_kills=10),
+    Rule("deaths_10", 10, "deaths", 1, "le", "At most 1 death by 10:00", "More than 1 death by 10:00"),
+    Rule("deaths_15", 15, "deaths", 2, "le", "At most 2 deaths by 15:00", "More than 2 deaths by 15:00"),
+    Rule("gold_diff_15", 15, "gold_diff", 0, "ge", "At least as much gold as the role opponent at 15:00", "Less gold than the role opponent at 15:00"),
+    Rule("cs_diff_10", 10, "cs_diff", 0, "ge", "At least as much CS as the role opponent at 10:00", "Less CS than the role opponent at 10:00"),
+    Rule("xp_diff_15", 15, "xp_diff", 0, "ge", "At least as much XP as the role opponent at 15:00", "Less XP than the role opponent at 15:00"),
+    Rule("high_kill_deaths_20", 20, "deaths", 7, "le", "At least 10 kills and fewer than 8 deaths by 20:00", "At least 10 kills and at least 8 deaths by 20:00", minimum_kills=10),
 )
 
 
@@ -153,10 +153,10 @@ def build_report(dataset: FeatureDataset) -> AnalysisReport:
             comparison.direction = "higher_in_group_a" if comparison.win_rate_difference_pp > 0 else "higher_in_group_b"
             comparison.summary = (
                 f"{comparison.group_a.label}: {comparison.group_a.wins}/{comparison.group_a.matches} "
-                f"vinster ({comparison.group_a.win_rate:.0%}). "
+                f"wins ({comparison.group_a.win_rate:.0%}). "
                 f"{comparison.group_b.label}: {comparison.group_b.wins}/{comparison.group_b.matches} "
-                f"vinster ({comparison.group_b.win_rate:.0%}). "
-                "Detta är ett samband i dina sparade matcher, inte ett bevis på orsak."
+                f"wins ({comparison.group_b.win_rate:.0%}). "
+                "This is an association in your stored matches, not proof of causation."
             )
     findings = sorted(
         [comparison for comparison in comparisons if comparison.status == "supported_association"],

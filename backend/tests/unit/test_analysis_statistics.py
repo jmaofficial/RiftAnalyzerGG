@@ -66,7 +66,7 @@ def test_strong_association_has_evidence_and_is_not_a_causal_claim():
     assert finding.difference_ci95_pp.lower > 0
     assert finding.adjusted_p_value < .0001
     assert finding.interpretation == "association_only"
-    assert "inte ett bevis på orsak" in finding.summary
+    assert "not proof of causation" in finding.summary
     assert len(finding.group_a.match_ids) == 30
     assert finding.direction == "higher_in_group_a"
 

@@ -44,6 +44,50 @@ def test_analysis_filters(imported_analysis):
     assert imported_analysis.get(BASE + "/features?patch=16.2").json()["selected_matches"] == 0
 
 
+def test_champion_filter_is_applied_to_features_and_report(imported_analysis, configured_riot):
+    response = imported_analysis.get(BASE + "/features?champion_id=1&position=MIDDLE")
+    assert response.json()["selected_matches"] == 1
+    assert response.json()["filters"]["champion_id"] == 1
+    assert imported_analysis.get(BASE + "?champion_id=1").json()["eligible_matches"] == 1
+    assert imported_analysis.get(BASE + "?champion_id=2").json()["selected_matches"] == 0
+    assert imported_analysis.get(BASE + "?champion_id=1&position=TOP").json()["selected_matches"] == 0
+    assert configured_riot.mock_calls == []
+
+
+def test_champion_filter_is_applied_before_limit(imported_analysis, configured_riot, analysis_case):
+    match, _ = analysis_case
+    payload = deepcopy(match.raw_data)
+    payload["metadata"]["matchId"] = "EUW1_2"
+    payload["info"]["gameStartTimestamp"] += 3600000
+    payload["info"]["participants"][0].update(championId=2, championName="Olaf")
+    timeline = deepcopy(match.timeline_data)
+    timeline["metadata"]["matchId"] = "EUW1_2"
+    configured_riot.get_match_details_by_match_id.return_value = payload
+    configured_riot.get_match_timeline.return_value = timeline
+    assert imported_analysis.post("/api/matches/EUW1_2/sync").status_code == 200
+    body = imported_analysis.get(BASE + "/features?champion_id=1&limit=1").json()
+    assert body["matched_total"] == body["selected_matches"] == 1
+    assert body["items"][0]["match_id"] == "EUW1_1"
+
+
+def test_options_use_only_stored_ranked_player_matches(imported_analysis, configured_riot):
+    response = imported_analysis.get(BASE + "/options")
+    assert response.status_code == 200
+    assert response.json() == {
+        "game_name": "JonnyBravo", "tag_line": "1998", "stored_matches": 1,
+        "champions": [{"champion_id": 1, "champion_name": "Annie", "matches": 1}],
+        "lanes": [{"position": "MIDDLE", "matches": 1}],
+    }
+    assert configured_riot.mock_calls == []
+
+
+def test_options_for_known_account_without_matches(client):
+    assert client.get('/api/players/jonnybravo/1998').status_code == 200
+    body = client.get(BASE + "/options").json()
+    assert body["stored_matches"] == 0
+    assert body["champions"] == body["lanes"] == []
+
+
 def test_analysis_limit_is_explicit_about_truncation(imported_analysis, configured_riot, analysis_case):
     match, _ = analysis_case
     payload = deepcopy(match.raw_data)
@@ -61,7 +105,7 @@ def test_analysis_limit_is_explicit_about_truncation(imported_analysis, configur
     assert response["items"][0]["match_id"] == "EUW1_2"
 
 
-@pytest.mark.parametrize("query", ["limit=0", "limit=501", "position=SUPPORT", "patch=16.22.1", "patch=x"])
+@pytest.mark.parametrize("query", ["limit=0", "limit=501", "position=SUPPORT", "patch=16.22.1", "patch=x", "champion_id=0", "champion_id=-1", "champion_id=Annie"])
 def test_invalid_analysis_filters(client, query):
     assert client.get(BASE + "?" + query).status_code == 422
 
@@ -69,6 +113,7 @@ def test_invalid_analysis_filters(client, query):
 def test_analysis_for_unknown_player_returns_404(client):
     assert client.get(BASE).status_code == 404
     assert client.get(BASE + "/features").status_code == 404
+    assert client.get(BASE + "/options").status_code == 404
 
 
 def test_other_queues_are_not_included(imported_analysis, session):

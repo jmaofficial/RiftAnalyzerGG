@@ -12,6 +12,10 @@ __pycache__/
 # Node / React
 node_modules/
 dist/
+*.tsbuildinfo
+test-results/
+playwright-report/
+.sites-runtime/
 
 # IDE
 .vscode/

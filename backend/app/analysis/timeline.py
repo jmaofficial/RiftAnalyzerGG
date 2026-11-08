@@ -71,5 +71,3 @@ def combat_events(frames: list[dict], participant_ids: set[int]) -> list[dict] |
                 return None
             events.append(event)
     return events
-
-
